@@ -1,8 +1,9 @@
-"""Chart: call curve P(S_T > K) on the left, put curve P(S_T < K) on the right, one line per expiry."""
+"""Chart: call curve P(S_T > K) on the left, put curve P(S_T < K) on the right, one line per expiry.
+Detected cliffs are marked with a diamond at the cliff strike."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import matplotlib
 
@@ -10,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from .cliffs import Structure  # noqa: E402
 from .data import Snapshot  # noqa: E402
 from .expiries import Pick  # noqa: E402
 
@@ -39,7 +41,12 @@ def _style(ax, title: str, ylabel: str) -> None:
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
 
 
-def plot(snap: Snapshot, series: List[Tuple[Pick, pd.DataFrame]], path: Union[str, Path]) -> Path:
+VERDICT_CN = {"strong_stop": "三线一致 → 强 stop", "migrating_out": "cliff 外移",
+              "mixed": "不一致", "insufficient": "样本不足"}
+
+
+def plot(snap: Snapshot, series: List[Tuple[Pick, pd.DataFrame]], path: Union[str, Path],
+         structures: Optional[Sequence[Structure]] = None) -> Path:
     fig, (ax_c, ax_p) = plt.subplots(1, 2, figsize=(15, 6.8), dpi=110, facecolor=SURFACE)
     fig.subplots_adjust(left=0.055, right=0.985, top=0.80, bottom=0.10, wspace=0.12)
     _style(ax_c, "call：Prob(S_T > K) = (C(K) - C(K+ΔK)) / ΔK", "P(S_T > K)")
@@ -52,6 +59,22 @@ def plot(snap: Snapshot, series: List[Tuple[Pick, pd.DataFrame]], path: Union[st
             d = df[df.side == side].sort_values("strike")
             ax.plot(d.strike, d.prob * 100, color=color, lw=2, marker="o", ms=5, mfc=color, mec=SURFACE,
                     mew=1.2, label=label, zorder=3)
+    for s in structures or ():
+        ax = ax_c if s.side == "C" else ax_p
+        for i, (pick, c) in enumerate(s.cliffs):
+            if not c:
+                continue
+            color = SERIES[i] if i < len(SERIES) else MUTED
+            ax.scatter([c.strike], [c.prob * 100], marker="D", s=70, color=color,
+                       edgecolors=INK, linewidths=1, zorder=4)
+            ax.annotate(f"{c.strike:g}", xy=(c.strike, c.prob * 100), xytext=(0, 9),
+                        textcoords="offset points", ha="center", fontsize=8.5, color=color)
+        if s.verdict != "insufficient":
+            note = VERDICT_CN[s.verdict]
+            if s.verdict == "migrating_out":
+                note += "（长牛特征）" if s.side == "C" else "（下沿下移）"
+            ax.annotate(f"cliff：{note}", xy=(0.98, 0.95), xycoords="axes fraction",
+                        ha="right", va="top", fontsize=9.5, color=INK2)
     for ax in (ax_c, ax_p):
         ax.axvline(snap.spot, color=INK2, lw=1, alpha=0.6, zorder=1)
         ax.annotate(f"现价 {snap.spot:.2f}", xy=(snap.spot, 1.0), xycoords=("data", "axes fraction"),
