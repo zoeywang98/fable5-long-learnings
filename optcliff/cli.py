@@ -28,8 +28,8 @@ def run_symbol(sym: str, a: argparse.Namespace) -> None:
     picks = _picks(a, snap.listed, snap.fetched.date())
     if not picks:
         raise ValueError("no standard monthly expiries found")
-    series = [(p, curves(snap.chain, p.expiry, snap.spot, a.tiers, a.step, a.max_spread)) for p in picks]
-    liq = [liquidity(snap.chain, p.expiry, snap.spot, a.tiers, a.step, a.max_spread) for p in picks]
+    series = [(p, curves(snap.chain, p.expiry, snap.spot, a.tiers, a.step)) for p in picks]
+    liq = [liquidity(snap.chain, p.expiry, snap.spot, a.tiers, a.step) for p in picks]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     step = f"_step{a.step:g}" if a.step else ""
@@ -45,8 +45,7 @@ def run_symbol(sym: str, a: argparse.Namespace) -> None:
 
     print(f"{snap.symbol} 现价 {snap.spot:.2f} · 到期 " + " · ".join(f"{p.expiry}（{p.dte}d）" for p in picks))
     for p, l in zip(picks, liq):
-        note = "" if l["quotes"] and l["usable"] / l["quotes"] >= 0.8 else " ⚠ 有效报价不足，结果可能不准"
-        print(f"  {p.expiry} 报价 {l['usable']}/{l['quotes']} 可用 · 中位相对价差 {l['median_rel_spread']:.1%}{note}")
+        print(f"  {p.expiry} 有报价 {l['quoted']}/{l['quotes']} · 中位相对价差 {l['median_rel_spread']:.1%}")
     print(f"→ {stem}.csv" + ("" if a.no_plot else f" / {stem}.png"))
 
 
@@ -58,8 +57,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--date", type=date.fromisoformat, help="as of a past day's close, YYYY-MM-DD (default: now)")
     ap.add_argument("-n", "--tiers", type=int, default=10, help="strikes above and below spot (default 10)")
     ap.add_argument("--step", type=float, help="only use strikes that are multiples of this (e.g. 10)")
-    ap.add_argument("--max-spread", type=float, default=0.15,
-                    help="drop quotes with (ask-bid)/mid above this (validity condition, default 0.15; 0 disables)")
     ap.add_argument("--out", default=str(PROJECT / "out"))
     ap.add_argument("--archive", default=str(PROJECT / "data" / "snapshots"),
                     help="keep raw API responses here ('' to disable)")
@@ -67,8 +64,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     a = ap.parse_args(argv)
     if a.tiers < 1 or (a.step is not None and a.step <= 0):
         ap.error("--tiers must be >= 1 and --step > 0")
-    if a.max_spread <= 0:
-        a.max_spread = None  # disabled
 
     failed = 0
     for sym in a.symbols:

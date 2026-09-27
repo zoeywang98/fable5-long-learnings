@@ -6,9 +6,8 @@
 
 on n listed strikes above and below spot.
 
-Validity condition (LONG_ENGINE.md Rule Set 2): wide spreads make the numbers
-unreliable, so quotes with bid <= 0, crossed markets, or relative spread
-(ask - bid) / mid above `max_spread` are dropped before pairing.
+Every listed strike that has a quote (ask > 0) is used exactly as quoted: nothing is
+filtered by spread and nothing is smoothed, so the raw jaggedness stays in the curve.
 """
 from __future__ import annotations
 
@@ -29,21 +28,10 @@ def window(strikes: Sequence[float], spot: float, n: int, step: Optional[float] 
     return [k for k in ks if k <= spot][-(n + 1):] + [k for k in ks if k > spot][:n + 1]
 
 
-def usable(quotes: pd.DataFrame, max_spread: Optional[float]) -> pd.Series:
-    """Quotes that satisfy the validity condition: two-sided, not crossed, tight enough."""
-    ok = quotes.ask > 0
-    if max_spread is not None:
-        rel = (quotes.ask - quotes.bid) * 2 / (quotes.ask + quotes.bid)
-        ok &= (quotes.bid > 0) & (quotes.ask >= quotes.bid) & (rel <= max_spread)
-    return ok
-
-
-def curve(quotes: pd.DataFrame, strikes: Sequence[float], side: str,
-          max_spread: Optional[float] = None) -> pd.DataFrame:
+def curve(quotes: pd.DataFrame, strikes: Sequence[float], side: str) -> pd.DataFrame:
     """quotes: rows for one expiry and one side ("C"/"P") with strike, bid, ask.
     rel_spread on each row is the worse (ask-bid)/mid of the pair's two legs."""
-    q = quotes[quotes.strike.isin(strikes)]
-    q = q[usable(q, max_spread)].sort_values("strike")
+    q = quotes[quotes.strike.isin(strikes) & (quotes.ask > 0)].sort_values("strike")
     k, bid, ask = q.strike.tolist(), q.bid.tolist(), q.ask.tolist()
     mid = [(b + a) / 2 for b, a in zip(bid, ask)]
     rel = [(a - b) / m if m > 0 else float("inf") for b, a, m in zip(bid, ask, mid)]
@@ -60,24 +48,20 @@ def curve(quotes: pd.DataFrame, strikes: Sequence[float], side: str,
     return pd.DataFrame(rows, columns=COLUMNS)
 
 
-def curves(chain: pd.DataFrame, expiry, spot: float, n: int = 10, step: Optional[float] = None,
-           max_spread: Optional[float] = None) -> pd.DataFrame:
+def curves(chain: pd.DataFrame, expiry, spot: float, n: int = 10, step: Optional[float] = None) -> pd.DataFrame:
     """Call and put curves for one expiry."""
     ce = chain[chain.expiry == expiry]
     strikes = window(ce.strike.unique(), spot, n, step)
-    return pd.concat([curve(ce[ce.cp == "C"], strikes, "C", max_spread),
-                      curve(ce[ce.cp == "P"], strikes, "P", max_spread)],
+    return pd.concat([curve(ce[ce.cp == "C"], strikes, "C"),
+                      curve(ce[ce.cp == "P"], strikes, "P")],
                      ignore_index=True)
 
 
-def liquidity(chain: pd.DataFrame, expiry, spot: float, n: int = 10, step: Optional[float] = None,
-              max_spread: Optional[float] = None) -> dict:
-    """How option-active the window is for one expiry: quotes in the window, how many pass
-    the validity condition, and the median relative spread of everything quoted (pre-filter),
-    so an illiquid name shows up even though its bad quotes were dropped from the curves."""
+def liquidity(chain: pd.DataFrame, expiry, spot: float, n: int = 10, step: Optional[float] = None) -> dict:
+    """Data only: contracts in the window, how many have a quote, median relative spread (ask-bid)/mid."""
     ce = chain[chain.expiry == expiry]
     q = ce[ce.strike.isin(window(ce.strike.unique(), spot, n, step))]
     quoted = q[q.ask > 0]
     rel = (quoted.ask - quoted.bid) * 2 / (quoted.ask + quoted.bid)
-    return {"quotes": int(len(q)), "usable": int(usable(q, max_spread).sum()),
+    return {"quotes": int(len(q)), "quoted": int(len(quoted)),
             "median_rel_spread": float(rel.median()) if len(rel) else float("nan")}
