@@ -175,6 +175,34 @@ Plot the resulting curve as price climbs strike by strike.
   - If the cliffs across expiries are **consistent (aligned at the same region)** → that is a **strong stop**.
 - **Puts are symmetric:** the same reverse calculation on puts gives the downside boundary for shorts.
 
+### Cross-expiry relations (her table, original wording)
+
+三条曲线一起看（1M / 3M / 6M，只取大交割日，如 2/20、3/20、6/18）：
+
+| 三条曲线的关系 | 她的结论 | Meaning |
+|----------------|----------|---------|
+| 三条在同一位置出现 cliff | 强阻力，这轮行情大概率在此结束 | Cliffs aligned → strong resistance; this move most likely ends here |
+| 远月 cliff 一个比一个高 | 长牛标的（"最棒的标的"） | Each farther expiry's cliff is higher → long-bull name ("the best name") |
+| 远月 cliff 反而更低 | 短期炒作，游资拉一下（"柚子 pop up"） | Farther cliffs are lower instead → short-term hype, hot money pushing it up |
+| 多个到期日 cliff 方向一致 | 不是游资，是有布局的资金 | Cliffs of several expiries move the same way → not hot money; positioned capital |
+| 大交割日这种结构结束 | 指数一般会跌 | When this structure ends on a big settlement date → the index usually falls |
+
+### Puts (看跌同理)
+
+"我算 call 多，但 put 也许更有意义。做空都是布局好的。"某 put 出现 cliff，同到期日 put 曲线又陡起来 → put 被抢买、价格抬高 → 可以买 put。坑：大盘不好会干扰，所以她认为 put 方向更可靠。
+
+("I compute calls more, but puts may matter more. Shorts are all pre-positioned." A put shows a cliff, then the same expiry's put curve turns steep again → puts are being bought up and their prices lifted → buying puts is indicated. Pitfall: a bad broad market interferes, which is why she considers the put direction more reliable.)
+
+```
+Prob(S_T < K) ≈ (P(K) − P(K−ΔK)) / ΔK
+```
+
+### Rolling (主力不是同一天建仓)
+
+主力不是同一天建仓：赚了 2 月的就开 6 月的，往后滚。所以要每天自动算、持续跟踪从哪个到期日滚到哪个。
+
+(Main money does not build in one day: having made money on February it opens June, rolling out. So compute automatically every day and keep tracking which expiry it rolls from and to.)
+
 ### Validity conditions
 
 - **Wide spreads make the calculation inaccurate.** Only run this on **option-active names** (tight bid–ask, liquid chains).
