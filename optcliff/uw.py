@@ -71,6 +71,11 @@ def get(path: str, tok: str, retries: int = 3, **params) -> dict:
             if exc.code in (401, 403):
                 raise ValueError(f"Unusual Whales 拒绝请求（HTTP {exc.code}）：检查 token 或订阅权限。{detail}") from exc
             raise ValueError(f"Unusual Whales {path} 失败（HTTP {exc.code}）：{detail}") from exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError):  # DNS / network blips
+            if attempt < retries:
+                time.sleep(2 ** attempt)
+                continue
+            raise
     raise AssertionError("unreachable")
 
 
