@@ -214,6 +214,22 @@ Three expiry curves whose cliffs **migrate upward with maturity** (short < mid <
 
 ---
 
+## Rule Set 3: IV / RV Regime (ZZ, 2026-10-27, original wording)
+
+Read on the IV/RV chart with the stock price overlaid (`lengine/ivrv.py`: IV30, trailing 21-session RV, IV rank over 1 year, quad-witching ATM IV).
+
+> iv低位向上走，rv大于iv向下走，是多头单腿ca行情。rv大于iv向上走，iv高位向上走空头行情
+>
+> 一轮上涨后iv超级高，然后拐头往下，rv开始往上。说明buy otm call力量用尽，随着到期都变想成sell call
+>
+> dark pool 期权call 结构 vanna dex都是看多的
+
+- **IV low and rising, RV above IV and falling** → a bullish, single-leg (long) call regime.
+- **RV above IV and rising, IV high and rising** → a bearish regime.
+- **After a rally IV is extremely high, then turns down while RV starts rising** → the buy-OTM-call force is spent; as expiry approaches those calls effectively turn into sell calls. This holds even when dark pool, the option call structure, vanna and DEX all look bullish.
+
+---
+
 ## Core Principle
 
 A **Cliff** is where the market begins refusing to pay for higher-price worlds.
