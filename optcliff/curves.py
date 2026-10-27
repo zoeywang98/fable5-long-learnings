@@ -20,11 +20,14 @@ COLUMNS = ["side", "strike", "strike_pair", "dk", "bid", "ask", "mid",
 
 
 def window(strikes: Sequence[float], spot: float, n: int, step: Optional[float] = None) -> List[float]:
-    """n strikes at/below spot and n above, plus one more each side so every strike has a pair.
+    """n strikes at/below spot and n above, plus one more each side so every strike has a pair; n <= 0 (the default
+    since 2026-10-26, per ZZ: every strike that has an option price) means every listed strike.
     With `step`, only strikes that are multiples of it are used (e.g. step=10 -> 200, 210, ...)."""
     ks = sorted(set(float(k) for k in strikes))
     if step:
         ks = [k for k in ks if abs(k / step - round(k / step)) < 1e-6]
+    if n <= 0:
+        return ks
     return [k for k in ks if k <= spot][-(n + 1):] + [k for k in ks if k > spot][:n + 1]
 
 

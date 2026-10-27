@@ -55,15 +55,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--expiries", help="YYYY-MM-DD,... (default: big monthlies near --targets days)")
     ap.add_argument("--targets", default="30,90,180", help="target days to expiry (default 30,90,180)")
     ap.add_argument("--date", type=date.fromisoformat, help="as of a past day's close, YYYY-MM-DD (default: now)")
-    ap.add_argument("-n", "--tiers", type=int, default=10, help="strikes above and below spot (default 10)")
+    ap.add_argument("-n", "--tiers", type=int, default=0,
+                    help="strikes above and below spot (default 0 = every listed strike)")
     ap.add_argument("--step", type=float, help="only use strikes that are multiples of this (e.g. 10)")
     ap.add_argument("--out", default=str(PROJECT / "out"))
     ap.add_argument("--archive", default=str(PROJECT / "data" / "snapshots"),
                     help="keep raw API responses here ('' to disable)")
     ap.add_argument("--no-plot", action="store_true")
     a = ap.parse_args(argv)
-    if a.tiers < 1 or (a.step is not None and a.step <= 0):
-        ap.error("--tiers must be >= 1 and --step > 0")
+    if a.tiers < 0 or (a.step is not None and a.step <= 0):
+        ap.error("--tiers must be >= 0 (0 = every strike) and --step > 0")
 
     failed = 0
     for sym in a.symbols:
