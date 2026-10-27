@@ -134,6 +134,12 @@ When a **price-difference cliff** (a sharp collapse in adjacent call-spread valu
 - **(b) Dealer risk-control ceiling** — the strike marks a dealer's gamma/vega risk-control upper bound, so quotes above it are suppressed.
 - **(c) Persistent OI structure** — large positions parked at that strike long-term (OI structure) cause calls in that region to be continuously sold and priced down.
 
+Her original wording (为什么会出现 cliff):
+
+- 大资金用某个行权价做 collar，把上方封顶；
+- 做市商在该价位有 gamma/vega 风控上限；
+- 长期挂着的大仓位（OI 结构）让这一带 call 一直被卖、价格被压低。
+
 **Rule:** When the bid–ask spread is small, the price-difference (call-spread) curve can be used to **reverse-engineer where institutions want price to go**. A tight-spread cliff is an institutional intent signal, not noise.
 
 ---
@@ -205,7 +211,7 @@ Prob(S_T < K) ≈ (P(K) − P(K−ΔK)) / ΔK
 
 ### Validity conditions
 
-- **Wide spreads make the calculation inaccurate.** Only run this on **option-active names** (tight bid–ask, liquid chains).
+- **Wide spreads make the calculation inaccurate.** Only run this on **option-active names** (tight bid–ask, liquid chains). Original: 限制：买卖价差大就不准，只用于期权活跃的股票。
 - When comparing the three expiry curves, if the **cliffs climb higher with longer expiry**, you MUST anchor the analysis on major settlement dates: **quad-witching (四巫日), 1-month, 3-month, 6-month**. Only major option settlement dates are meaningful; minor weeklies are not.
 
 ### Signal
